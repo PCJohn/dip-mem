@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=denoise
-#SBATCH -o gypsum/logs/%j_denoise.txt 
-#SBATCH -e gypsum/errs/%j_denoise.txt
-#SBATCH -p 1080ti-short
+#SBATCH --job-name=inpaint
+#SBATCH -o gypsum/logs/%j_inpaint.txt 
+#SBATCH -e gypsum/errs/%j_inpaint.txt
+#SBATCH -p 180ti-short
 #SBATCH --gres=gpu:1
 #SBATCH --mem=100000
 
@@ -15,4 +15,6 @@ python code/dip.py \
     --niter $4 \
     --traj_iter $5 \
     --net_depth $6 \
+    --mask $7 \
+
 
