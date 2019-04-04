@@ -11,6 +11,10 @@ import matplotlib.pyplot as plt
 def gen_hyp_str(lr,depth,added_var):
     return '_lr-'+str(lr)+'_d-'+str(depth)+'_var-'+str(added_var)
 
+def extract_hyp_str(fname):
+    hyp_str,_ = os.path.splitext(os.path.split(fname)[-1])
+    return hyp_str[hyp_str.index('_lr'):]
+
 def fname_with_hparams(output_dir,fname,hyp_str):
     fl,ext = fname.split('.')[:2]
     return os.path.join(output_dir,fl+hyp_str+'.'+ext)
@@ -32,8 +36,6 @@ def imread(path):
 def imwrite(path,img):
     img = 255.0 * img
     if len(img.shape) == 2:
-        #plt.imsave(path,np.uint8(img),cmap='gray')
-        # use cv2 to writr 1-channel images: mplotlib adds channels
         cv2.imwrite(path,np.uint8(img))
     else:
         plt.imsave(path,np.uint8(img))
@@ -97,13 +99,11 @@ def mask_img(img,mask):
         masked_img[:,:,ch] = np.multiply(masked_img[:,:,ch],mask)
     return masked_img
 
-def add_mask_noise(mask,drop_frac=0.5):
+def add_mask_noise(mask,drop_frac=0.5,additive=False):
     w,h = mask.shape
-    
     m = np.random.random((w,h))
     m[m < drop_frac] = 0
     m[m >= drop_frac] = 1
-    
     m = np.multiply(mask,m)
     return m
 
@@ -117,6 +117,13 @@ def save_traj(path,traj_arr):
 def load_traj(path):
     traj_arr = np.load(path)['arr_0']
     traj_arr = np.float32(traj_arr) / 255.
+    if traj_arr.shape[-1] == 1:
+        traj_arr = traj_arr[:,:,:,0]
     return traj_arr
+
+def traj_file_list(folder):
+    traj_ext = '.npz'
+    return [f for f in os.listdir(folder) if f.endswith(traj_ext)]
+
 
 

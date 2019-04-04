@@ -14,5 +14,5 @@ python code/dip.py \
     --lr $3 \
     --niter $4 \
     --traj_iter $5 \
-    --net_depth $6 \
+    --net_struct $6 \
 

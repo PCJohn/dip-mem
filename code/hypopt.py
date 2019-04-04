@@ -73,22 +73,11 @@ if __name__ == '__main__':
         
         assert (len(noisy_T) == len(added_noisy_T))
 
-        
         err_true = []
+        err_traj = []
         for t1,t2 in zip(noisy_T,added_noisy_T):
             err_true.append(((im - t1)**2).sum())
-               
-        """# save variation of true error
-        plt.title('True Error')
-        x = [(i+1)*traj_iter for i in range(len(err_true))]
-        plt.subplot(121)
-        plt.plot(x,err_true)
-        plt.subplot(122)
-        plt.plot(x[10:],err_true[10:])
-
-        plt.savefig(utils.fname_with_hparams(output_dir,'err_true.png',hyp_str),bbox_inches='tight')
-        plt.close()
-        """
+            err_traj.append(((t1 - t2)**2).sum())
 
         # find true best iteration and save image
         best_iter = np.argmin(err_true)
@@ -100,19 +89,9 @@ if __name__ == '__main__':
             res['true_best_psnr'] = float(best_psnr_true)
             res['true_best_hyp'] = hyp_str
             res['true_best_iter'] = int((best_iter+1)*traj_iter)
-            final_best_true = best_rec
+            final_best_true = best_rec.copy()
 
-        """title = ' '.join(['True Best.',
-                          'iter: '+str((best_iter+1)*traj_iter),
-                          'err: {:.2f}'.format(best_err_true),
-                          'psnr: {:.2f}'.format(best_psnr_true)
-                        ])
-        plt.title(title,fontsize=12)
-        utils.imshow(best_rec)
-        plt.savefig(utils.fname_with_hparams(output_dir,'best_true.png',hyp_str),bbox_inches='tight')
-        plt.close()
-        """
-
+        
         # find pred. best iteration and save image
         best_err_pred = 1e10
         best_iter_pred = 0
@@ -124,46 +103,18 @@ if __name__ == '__main__':
                     best_iter_pred = it1
         best_rec_pred = noisy_T[best_iter_pred]
         best_psnr_pred = compare_psnr(best_rec_pred.astype(im.dtype),im)
+       
+        print(best_err_pred,best_psnr_pred,hyp_str)
         
         if best_err_pred < res['pred_best_err']:
             res['pred_best_err'] = float(best_err_pred)
             res['pred_best_psnr'] = float(best_psnr_pred)
             res['pred_best_hyp'] = hyp_str
             res['pred_best_iter'] = int((best_iter_pred+1)*traj_iter)
-            final_best_pred = best_rec_pred
-            final_err_true_pred = err_true
+            final_best_pred = best_rec_pred.copy()
+            final_err_true_pred = err_true.copy()
+            final_err_traj_pred = err_traj.copy()
 
-        """title = ' '.join([
-                    'Pred Best. iter: '+str((best_iter_pred+1)*traj_iter),
-                    'pred err: {:.2f}'.format(best_err_pred),
-                    'true err: {:.2f}'.format(err_true[best_iter_pred]),
-                    'psnr: {:.2f}'.format(best_psnr_pred)
-                    ])
-        plt.title(title,fontsize=8)
-        utils.imshow(best_rec_pred)
-        plt.savefig(utils.fname_with_hparams(output_dir,'best_pred.png',hyp_str),bbox_inches='tight')
-        plt.close()
-        """ 
-               
-        """# save final image in trajectory
-        plt.title('Final Iter. True err: '+str(err_true[-1]))
-        final_rec = noisy_T[-1]
-        utils.imshow(final_rec)
-        plt.savefig(utils.fname_with_hparams(output_dir,'final_pred.png',hyp_str),bbox_inches='tight')
-        plt.close()
-        """
-        
-        """# save trajectories
-        for it1,t1 in enumerate(noisy_T):
-            plt.imshow(t1)
-            plt.savefig(utils.fname_with_hparams(output_dir,'T1_'+str(it1)+'.png',''))
-            plt.close()
-        for it2,t2 in enumerate(added_noisy_T):
-            plt.imshow(t2)
-            plt.savefig(utils.fname_with_hparams(output_dir,'T2_'+str(it2)+'.png',''))
-            plt.close()
-        """        
-   
     # save final results
     with open(os.path.join(output_dir,'res.json'),'w') as f:
         f.write(json.dumps(res,indent=2))
@@ -186,9 +137,21 @@ if __name__ == '__main__':
     plt.plot(x,final_err_true_pred)
     plt.subplot(122)
     plt.plot(x[10:],final_err_true_pred[10:])
-    plt.axvline(x=res['pred_best_iter'],label='pred. iter')
+    plt.axvline(x=res['pred_best_iter'],label='pred. iter',c='black')
     plt.legend()
     plt.savefig(utils.fname_with_hparams(output_dir,'err_true.png',hyp_str),bbox_inches='tight')
+    plt.close()
+
+    # save variation of error between trajectories
+    plt.title('True error with predicted params')
+    x = [(i+1)*traj_iter for i in range(len(final_err_traj_pred))]
+    plt.subplot(121)
+    plt.plot(x,final_err_traj_pred)
+    plt.subplot(122)
+    plt.plot(x[10:],final_err_traj_pred[10:])
+    plt.axvline(x=res['pred_best_iter'],label='pred. iter',c='black')
+    plt.legend()
+    plt.savefig(utils.fname_with_hparams(output_dir,'err_traj.png',hyp_str),bbox_inches='tight')
     plt.close()
 
     # save best denoised image
