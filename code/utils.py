@@ -8,8 +8,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt 
 
-def gen_hyp_str(lr,depth,added_var):
-    return '_lr-'+str(lr)+'_d-'+str(depth)+'_var-'+str(added_var)
+def gen_hyp_str(lr,depth,added_var,lang_sigma,init,init_scale,bn,stride):
+    return '_lr-'+str(lr)+'_d-'+str(depth)+'_var-'+str(added_var)+'_L-'+str(lang_sigma)+'_init-'+str(init)+'_scale-'+str(init_scale)+'_bn-'+str(bn)+'_st-'+str(stride)
 
 def extract_hyp_str(fname):
     hyp_str,_ = os.path.splitext(os.path.split(fname)[-1])
@@ -99,7 +99,7 @@ def mask_img(img,mask):
         masked_img[:,:,ch] = np.multiply(masked_img[:,:,ch],mask)
     return masked_img
 
-def add_mask_noise(mask,drop_frac=0.5,additive=False):
+def add_mask_noise(mask,drop_frac=0.5):
     w,h = mask.shape
     m = np.random.random((w,h))
     m[m < drop_frac] = 0
@@ -124,6 +124,50 @@ def load_traj(path):
 def traj_file_list(folder):
     traj_ext = '.npz'
     return [f for f in os.listdir(folder) if f.endswith(traj_ext)]
+
+
+
+### FFT Utils ###
+def channel_fft(ch):
+    f = np.fft.fft2(ch)
+    fshift = np.fft.fftshift(f)
+    mag = np.abs(fshift)
+    return mag
+
+def fft(im):
+    if len(im.shape) == 2:
+        return channel_fft(im)
+    else:
+        return np.stack([channel_fft(im[:,:,ch]) for ch in range(im.shape[2])],axis=-1)
+
+def band_pass_filter(im_shape,r,s,n_ch):
+    w,h = im_shape[0],im_shape[1]
+    f1 = np.zeros((w,h))
+    f2 = np.zeros((w,h))
+    cv2.circle(f1,(h//2,w//2),r+s,1,-1)
+    cv2.circle(f2,(h//2,w//2),r,1,-1)
+    filt = (f1-f2)
+    if n_ch > 1:
+        filt = np.stack([filt]*n_ch,axis=-1)
+    #plt.imshow(filt,cmap='gray')
+    #plt.savefig('filt.png')
+    #import pdb; pdb.set_trace();
+    return filt
+   
+def bandpass_set(im_shape,s=1):
+    n_ch = 1
+    if len(im_shape) == 3:
+        n_ch = im_shape[-1]
+    R = min(im_shape[0],im_shape[1])
+    filt_bank = [band_pass_filter(im_shape,r,s,n_ch) for r in np.arange(s,R,s)]
+    filt_bank = [f for f in filt_bank if f.sum() > 0]
+    return filt_bank
+
+def power_variation(img_fft,filt_bank):
+    pow_var = np.array([(img_fft * filt).sum() for filt in filt_bank])
+    return pow_var #/ pow_var.max()
+
+### *** ###
 
 
 

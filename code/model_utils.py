@@ -1,12 +1,28 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import torch.nn.functional as F
 from downsampler import Downsampler
 
 def add_module(self, module):
     self.add_module(str(len(self) + 1), module)
     
 torch.nn.Module.add = add_module
+
+
+class Flatten(nn.Module):
+    def forward(self, input):
+        return input.view(input.size(0), -1)
+
+
+class ReshapeToImg(nn.Module):
+    def __init__(self,shape):
+        super(ReshapeToImg, self).__init__()
+        self.shape = shape
+
+    def forward(self, input):
+        return input.view(*self.shape)
+
 
 class Concat(nn.Module):
     def __init__(self, dim, *args):
@@ -73,6 +89,30 @@ class Swish(nn.Module):
         return x * self.s(x)
 
 
+class AbsAct(nn.Module):
+    def __init__(self):
+        super(AbsAct, self).__init__()
+    
+    def forward(self, x):
+        return torch.abs(x)
+    
+
+class SinAct(nn.Module):
+    def __init__(self):
+        super(SinAct, self).__init__()
+    
+    def forward(self, x):
+        return torch.sin(x)
+
+
+class ReLUAct(nn.Module):
+    def __init__(self):
+        super(ReLUAct, self).__init__()
+
+    def forward(self, x):
+        return F.relu(x)
+
+
 def act(act_fun = 'LeakyReLU'):
     '''
         Either string defining an activation function or module (e.g. nn.ReLU)
@@ -86,13 +126,23 @@ def act(act_fun = 'LeakyReLU'):
             return nn.ELU()
         elif act_fun == 'none':
             return nn.Sequential()
+        elif act_fun == 'Sigmoid':
+            return nn.Sigmoid()
+        elif act_fun == 'Abs':
+            return AbsAct()
+        elif act_fun == 'Sin':
+            return SinAct()
+        elif act_fun == 'ReLU':
+            return ReLUAct()
         else:
             assert False
     else:
         return act_fun()
 
 
-def bn(num_features):
+def bn(num_features,use_fc=False):
+    if use_fc:
+        return nn.BatchNorm1d(num_features)
     return nn.BatchNorm2d(num_features)
 
 
@@ -122,3 +172,7 @@ def conv(in_f, out_f, kernel_size, stride=1, bias=True, pad='zero', downsample_m
 
     layers = filter(lambda x: x is not None, [padder, convolver, downsampler])
     return nn.Sequential(*layers)
+
+
+
+
